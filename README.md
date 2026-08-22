@@ -1,4 +1,4 @@
-# South Korean fertility changepoint analysis
+# MSc Project
 
 This repository contains the code and input files needed to reproduce the results and analyses presented in my MSc Project; Bayesian Inference and Prior Sensitivity: Modelling Recent Fertility Dynamics in South Korea.
 
