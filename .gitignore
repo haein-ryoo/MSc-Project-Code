@@ -1,0 +1,12 @@
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/
+*_cache/
+*_files/
+*.html
+*.log
+*.aux
+*.out
+*.toc
+images/
