@@ -4,7 +4,7 @@ This repository contains the code and input files needed to reproduce the result
 
 ## Main files
 
-- `fit_changepoint.Rmd`: main analysis document.
+- `main_analysis.Rmd`: main analysis document.
 - `data/fertility.csv`: South Korean annual total fertility rate input file.
 - `stan/changepoint.stan`: changepoint model.
 - `stan/nullmodel.stan`: Phase-II-only model; used for comparison.
