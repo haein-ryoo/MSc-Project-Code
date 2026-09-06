@@ -6,14 +6,14 @@ functions {
     int T = num_elements(f);
     real lp = 0;
 
-    // Phase II: AR(1) process for first differences, conditional on Delta f[2].
+    // Phase II
     for (t in 3:tau) {
       real delta_t = f[t] - f[t - 1];
       real delta_lag = f[t - 1] - f[t - 2];
       lp += normal_lpdf(delta_t | alpha + phi * delta_lag, sigma1);
     }
 
-    // Phase III: stationary, mean-reverting AR(1) process for TFR levels.
+    // Phase III
     for (t in (tau + 1):T) {
       lp += normal_lpdf(f[t] | (1 - rho) * mu + rho * f[t - 1], sigma2);
     }
@@ -24,13 +24,12 @@ functions {
 
 data {
   int<lower=4> T;
-  vector[T] f;                         // observed annual TFR
+  vector[T] f;
 
   int<lower=1> N_tau;
   array[N_tau] int<lower=3, upper=T - 1> tau_candidates;
 
-  // 1 = inflated UN empirical Bayes, 2 = reference,
-  // 3 = penalised complexity.
+  // 1 = inflated UN empirical Bayes, 2 = reference, 3 = penalised complexity.
   int<lower=1, upper=3> prior_type;
 
   // Empirical Bayes summaries from the UN hierarchical model.
@@ -49,7 +48,7 @@ parameters {
   real<lower=0, upper=1> phi;
   real<lower=0.001, upper=0.5> sigma1;
 
-  // Phase III parameters of inferential interest.
+  // Phase III parameters of interest.
   real<lower=0, upper=2.1> mu;
   real<lower=0.001, upper=0.999> rho;
   real<lower=0.001, upper=0.5> sigma2;
@@ -58,14 +57,12 @@ parameters {
 model {
   vector[N_tau] lp_tau;
 
-  // Fixed Phase II prior: this component is nuisance-only in the comparison.
+  // Fixed Phase II prior
   alpha ~ normal(-0.1, 0.1);
   phi ~ normal(0.5, 0.2);
   // Uniform priors for sigma1 and, except below, sigma2 are induced by bounds.
 
   if (prior_type == 1) {
-    // Inflated UN prior: original bayesTFR empirical Bayes SDs multiplied by 2
-    // to reduce prior-data conflict for the South Korean series.
     mu ~ normal(mu_bar, 2 * sigma_mu);
     rho ~ normal(rho_bar, 2 * sigma_rho);
   } else if (prior_type == 2) {
@@ -76,12 +73,10 @@ model {
     real log_abs_jacobian = log(rho)
                             - log1m(square(rho))
                             - log(distance);
-
     mu ~ normal(mu_bar, sigma_mu);
     // PC prior induced by distance = sqrt(-log(1-rho^2)).
     target += log(lambda_pc) - lambda_pc * distance + log_abs_jacobian;
   }
-
   // Uniform p(tau) = 1/N_tau; log_sum_exp analytically marginalises tau.
   for (k in 1:N_tau) {
     lp_tau[k] = candidate_log_lik(f, tau_candidates[k],
@@ -112,9 +107,6 @@ generated quantities {
   tau_index = categorical_rng(tau_prob);
   tau_draw = tau_candidates[tau_index];
 
-  // Conditional observation-level log scores under the sampled tau.
-  // These support an approximate PSIS-LOO diagnostic. Since tau is a single
-  // global latent variable, this is not exact marginalized pointwise LOO.
   for (t in 3:T) {
     if (t <= tau_draw) {
       real delta_t = f[t] - f[t - 1];
@@ -122,8 +114,7 @@ generated quantities {
       log_lik[t - 2] = normal_lpdf(delta_t |
                                       alpha + phi * delta_lag, sigma1);
     } else {
-      log_lik[t - 2] = normal_lpdf(f[t] |
-                                      (1 - rho) * mu + rho * f[t - 1], sigma2);
+      log_lik[t - 2] = normal_lpdf(f[t] | (1 - rho) * mu + rho * f[t - 1], sigma2);
     }
   }
 
@@ -132,8 +123,7 @@ generated quantities {
   f_rep[2] = f[2];
   for (t in 3:tau_draw) {
     real delta_lag_rep = f_rep[t - 1] - f_rep[t - 2];
-    f_rep[t] = f_rep[t - 1]
-               + normal_rng(alpha + phi * delta_lag_rep, sigma1);
+    f_rep[t] = f_rep[t - 1] + normal_rng(alpha + phi * delta_lag_rep, sigma1);
   }
   for (t in (tau_draw + 1):T) {
     f_rep[t] = normal_rng((1 - rho) * mu + rho * f_rep[t - 1], sigma2);
@@ -142,7 +132,6 @@ generated quantities {
   // Posterior predictive Phase III trajectory from the final observation.
   f_forecast[1] = normal_rng((1 - rho) * mu + rho * f[T], sigma2);
   for (h in 2:10) {
-    f_forecast[h] = normal_rng((1 - rho) * mu
-                               + rho * f_forecast[h - 1], sigma2);
+    f_forecast[h] = normal_rng((1 - rho) * mu + rho * f_forecast[h - 1], sigma2);
   }
 }
